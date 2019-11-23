@@ -12,7 +12,7 @@ curl -X POST "localhost:9200/testpoetry/_search?pretty" -H 'Content-Type: applic
 }
 '
 
-curl -X GET "localhost:9200/testpoetry/_search?pretty" -H 'Content-Type: application/json' -d'
+curl -X POST "localhost:9200/testpoetry/_search?pretty" -H 'Content-Type: application/json' -d'
 {
     "query": {
         "match" : {
@@ -25,4 +25,17 @@ curl -X GET "localhost:9200/testpoetry/_search?pretty" -H 'Content-Type: applica
 }
 '
 
+curl -X GET "localhost:9200/test-index/_search?q=kimchy"
 
+curl -X POST "localhost:9200/test-index/_search?pretty" -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match" : {
+            "author" : {
+                "query" : "kimchy",
+                "operator":   "and" 
+            }
+        }
+    }
+}
+'
