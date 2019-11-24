@@ -1,5 +1,6 @@
-import json, os, datetime, sys, logging
+import json, os, datetime, sys, logging, requests
 from elasticsearch import Elasticsearch
+import pysolr
 
 root_dir = '/mnt/Files/HP/Graduate/IIT/2019Fall/CSP554/Project/chinese-poetry'
 sub_dir_names = [
@@ -20,10 +21,74 @@ sub_dir_names = [
     ('wudai', '南唐诗人', 'authors'),
     ('youmengying', '幽梦影', 'youmengying')
 ]
+
+engine = ''
+
+# Elasticsearch
 es = Elasticsearch()
 
+# Solr
+port = '7574'
+solr_dict = {
+    'poetry': pysolr.Solr('http://localhost:%s/solr/poetry' % port, always_commit=True),
+    'author': pysolr.Solr('http://localhost:%s/solr/author' % port, always_commit=True)
+    }
 
-def make_index(file_path, index, category):
+
+def main():
+    global engine
+    preprocess()
+    
+    logging.getLogger(__name__).info('Runing Elasticsearch...')
+    engine = 'elasticsearch'
+    start = datetime.datetime.now()
+    load_files()
+    logging.getLogger(__name__).info('Elasticsearch takes %.1f s.' % (datetime.datetime.now() - start).total_seconds())
+    
+    logging.getLogger(__name__).info('Runing Solr...')
+    engine = 'solr'
+    start = datetime.datetime.now()
+    load_files()
+    logging.getLogger(__name__).info('Solr takes %.1f s.' % (datetime.datetime.now() - start).total_seconds())
+
+    
+def preprocess():
+    
+    logging.getLogger(__name__).debug('Preparing...')
+    
+    # Elasticsearch
+    # Remove index to avoid multiple indexing
+    es.indices.delete(index='poetry')
+    es.indices.delete(index='author')
+    
+    # Solr
+    # Delete collections if exist
+    requests.get("http://localhost:%s/solr/admin/collections?action=DELETE&name=poetry" % port)
+    requests.get("http://localhost:%s/solr/admin/collections?action=DELETE&name=author" % port)
+    # Create new collections
+    numShards = 1
+    replicationFactor = 1
+    r1 = requests.get("http://localhost:%s/solr/admin/collections?action=CREATE&name=poetry&numShards=%d&replicationFactor=%d" % (port, numShards, replicationFactor))
+    r2 = requests.get("http://localhost:%s/solr/admin/collections?action=CREATE&name=author&numShards=%d&replicationFactor=%d" % (port, numShards, replicationFactor))
+    if json.loads(r1.text)['responseHeader']['status'] == 0 and json.loads(r2.text)['responseHeader']['status'] == 0:
+        logging.getLogger(__name__).debug('Success building Solr collections.')
+    else:
+        logging.getLogger(__name__).debug('Failed building Solr collections.')
+
+
+def load_files():
+    for sub_dir_name in sub_dir_names:
+        sub_dir, category, name_pattern = sub_dir_name
+        database = 'author' if name_pattern[:6] == 'author' else 'poetry'
+        for file in os.listdir(os.path.join(root_dir, sub_dir)):
+            filename = os.fsdecode(file)
+            if filename[:len(name_pattern)] == name_pattern and filename[-4:].lower() == 'json':
+                logging.getLogger(__name__).debug("Dealing with file: %s" % filename)
+                index_file(os.path.join(root_dir, sub_dir, filename), database, category)
+
+                
+def index_file(file_path, database, category):
+    global engine
     fp = open(file_path, 'r')
     content = fp.read()
     json_files = json.loads(content)
@@ -33,22 +98,18 @@ def make_index(file_path, index, category):
     for i in range(len(json_files)):
         content = json_files[i]
         content['category'] = category
-        es.index(index=index, body=content)
+        if engine == 'elasticsearch':
+            es.index(index=database, body=content)
+        elif engine == 'solr':
+            solr_dict[database].add([content])
     fp.close()
     logging.getLogger(__name__).info("%d files added." % len(json_files))
-    res = es.search(index=index, body={"query": {"match_all": {}}})
-    logging.getLogger(__name__).info("%d items in %s." % (res['hits']['total']['value'], index))
-
-
-def main():
-    for sub_dir_name in sub_dir_names:
-        sub_dir, category, name_pattern = sub_dir_name
-        index = 'author' if name_pattern[:6] == 'author' else 'poetry'
-        for file in os.listdir(os.path.join(root_dir, sub_dir)):
-            filename = os.fsdecode(file)
-            if filename[:len(name_pattern)] == name_pattern and filename[-4:].lower() == 'json':
-                logging.getLogger(__name__).debug("Dealing with file: %s" % filename)
-                make_index(os.path.join(root_dir, sub_dir, filename), index, category)
+    if engine == 'elasticsearch':
+        num = es.search(index=database, body={"query": {"match_all": {}}})['hits']['total']['value']
+    elif engine == 'solr':
+        r = requests.get('http://localhost:%s/solr/%s/select?indent=on&q=*:*' % (port, database))
+        num = json.loads(r.text)['response']['numFound']
+    logging.getLogger(__name__).info("%d items in %s." % (num, database))
 
 
 log_level = logging.DEBUG
@@ -62,9 +123,4 @@ logger.addHandler(handler)
 logging.basicConfig(filename='load_json.log', filemode='a', format=format)
 
 if __name__ == '__main__':
-    # Remove index to avoid multiple indexing
-    es.indices.delete(index='poetry')
-    es.indices.delete(index='author')
-    start = datetime.datetime.now()
     main()
-    logging.getLogger(__name__).info('Done. Takes %.1f s.' % (datetime.datetime.now() - start).total_seconds())
