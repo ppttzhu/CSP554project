@@ -40,11 +40,14 @@ curl -X POST "localhost:9200/test-index/_search?pretty" -H 'Content-Type: applic
 }
 '
 
+curl -X GET "localhost:9200/poetry/_settings?pretty"
+
+
 # Solr ==============================================
 
 curl -X GET     "http://localhost:7574/solr/admin/collections?action=CREATE&name=test&numShards=1&replicationFactor=1" 
 
-curl -X POST -H 'Content-Type: application/json' 'http://localhost:7574/solr/test/update/json/docs' --data-binary '
+curl -X POST -H 'Content-Type: application/json' 'http://localhost:7574/solr/poetry/update/json/docs' --data-binary '
 {
   "id": "66kfkkffk",
   "title": "Doc ddddd1"
@@ -53,4 +56,4 @@ curl -X POST -H 'Content-Type: application/json' 'http://localhost:7574/solr/tes
 
 curl 'http://localhost:7574/solr/test/update?commit=true' --data-binary @/mnt/Files/HP/Graduate/IIT/2019Fall/CSP554/Project/chinese-poetry/json/poet.song.1000.json -H 'Content-type:application/json'
 
-curl -X GET "http://localhost:7574/solr/test/select?indent=on&q=*:*"
+curl -X GET "http://localhost:7574/solr/poetry/select?indent=on&q=*:*"

@@ -1,8 +1,8 @@
-import json, os, datetime, sys, logging, requests
+import json, os, datetime, logging, requests
 from elasticsearch import Elasticsearch
 import pysolr
+from config import *
 
-root_dir = '/mnt/Files/HP/Graduate/IIT/2019Fall/CSP554/Project/chinese-poetry'
 sub_dir_names = [
     # sub_dir, category, name_pattern
     ('ci', '宋词', 'ci.song'),
@@ -22,20 +22,9 @@ sub_dir_names = [
     ('youmengying', '幽梦影', 'youmengying')
 ]
 
-engine = ''
-
-# Elasticsearch
-es = Elasticsearch()
-
-# Solr
-port = '7574'
-solr_dict = {
-    'poetry': pysolr.Solr('http://localhost:%s/solr/poetry' % port, always_commit=True),
-    'author': pysolr.Solr('http://localhost:%s/solr/author' % port, always_commit=True)
-    }
-
 
 def main():
+    
     global engine
     preprocess()
     
@@ -44,7 +33,7 @@ def main():
     start = datetime.datetime.now()
     load_files()
     logging.getLogger(__name__).info('Elasticsearch takes %.1f s.' % (datetime.datetime.now() - start).total_seconds())
-    
+     
     logging.getLogger(__name__).info('Runing Solr...')
     engine = 'solr'
     start = datetime.datetime.now()
@@ -54,22 +43,35 @@ def main():
     
 def preprocess():
     
-    logging.getLogger(__name__).debug('Preparing...')
+    # Parameters 
+    numShards = 1
+    numReplica = 1
+    
+    logging.getLogger(__name__).debug('Preparing Elasticsearch...')
     
     # Elasticsearch
-    # Remove index to avoid multiple indexing
-    es.indices.delete(index='poetry')
-    es.indices.delete(index='author')
+    # Delete indices if exist to avoid multiple indexing
+    es.indices.delete(index='poetry', ignore=[400, 404])
+    es.indices.delete(index='author', ignore=[400, 404])
+    # Create new indices
+    request_body = {
+        "settings" : {
+            "number_of_shards": numShards,
+            "number_of_replicas": numReplica
+        }
+    }
+    es.indices.create(index='poetry', body=request_body)
+    es.indices.create(index='author', body=request_body)
+    
+    logging.getLogger(__name__).debug('Preparing Solr...')
     
     # Solr
-    # Delete collections if exist
+    # Delete collections if exist to avoid multiple indexing
     requests.get("http://localhost:%s/solr/admin/collections?action=DELETE&name=poetry" % port)
     requests.get("http://localhost:%s/solr/admin/collections?action=DELETE&name=author" % port)
     # Create new collections
-    numShards = 1
-    replicationFactor = 1
-    r1 = requests.get("http://localhost:%s/solr/admin/collections?action=CREATE&name=poetry&numShards=%d&replicationFactor=%d" % (port, numShards, replicationFactor))
-    r2 = requests.get("http://localhost:%s/solr/admin/collections?action=CREATE&name=author&numShards=%d&replicationFactor=%d" % (port, numShards, replicationFactor))
+    r1 = requests.get("http://localhost:%s/solr/admin/collections?action=CREATE&name=poetry&numShards=%d&replicationFactor=%d" % (port, numShards, numReplica))
+    r2 = requests.get("http://localhost:%s/solr/admin/collections?action=CREATE&name=author&numShards=%d&replicationFactor=%d" % (port, numShards, numReplica))
     if json.loads(r1.text)['responseHeader']['status'] == 0 and json.loads(r2.text)['responseHeader']['status'] == 0:
         logging.getLogger(__name__).debug('Success building Solr collections.')
     else:
@@ -80,11 +82,11 @@ def load_files():
     for sub_dir_name in sub_dir_names:
         sub_dir, category, name_pattern = sub_dir_name
         database = 'author' if name_pattern[:6] == 'author' else 'poetry'
-        for file in os.listdir(os.path.join(root_dir, sub_dir)):
+        for file in os.listdir(os.path.join(poetry_dir, sub_dir)):
             filename = os.fsdecode(file)
             if filename[:len(name_pattern)] == name_pattern and filename[-4:].lower() == 'json':
                 logging.getLogger(__name__).debug("Dealing with file: %s" % filename)
-                index_file(os.path.join(root_dir, sub_dir, filename), database, category)
+                index_file(os.path.join(poetry_dir, sub_dir, filename), database, category)
 
                 
 def index_file(file_path, database, category):
@@ -111,16 +113,6 @@ def index_file(file_path, database, category):
         num = json.loads(r.text)['response']['numFound']
     logging.getLogger(__name__).info("%d items in %s." % (num, database))
 
-
-log_level = logging.DEBUG
-logger = logging.getLogger(__name__)
-logger.setLevel(log_level)
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(log_level)
-format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-handler.setFormatter(logging.Formatter(format))
-logger.addHandler(handler)
-logging.basicConfig(filename='load_json.log', filemode='a', format=format)
 
 if __name__ == '__main__':
     main()

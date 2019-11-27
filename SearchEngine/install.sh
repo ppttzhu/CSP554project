@@ -73,9 +73,9 @@ sudo bash ./install_solr_service.sh solr-8.3.0.tgz -i ~/
 # sudo systemctl start solr
 
 # Start Solr in SolrCloud Mode
-~/solr/bin/solr start -e cloud
-# or
-# ~/solr/bin/solr start -cloud -p 7574 -s ~/solr/bin/example/cloud/node1/solr
+~/solr/bin/solr start -cloud -p 7574
+# or to run with example
+# ~/solr/bin/solr start -e cloud 
 
 # Test Solr, http://localhost:7574/solr/
 
