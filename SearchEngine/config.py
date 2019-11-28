@@ -4,8 +4,6 @@ import pysolr
 
 poetry_dir = '/mnt/Files/HP/Graduate/IIT/2019Fall/CSP554/Project/chinese-poetry'
 
-engine = ''  # a global variable for iteration
-
 # Elasticsearch
 es = Elasticsearch()
 

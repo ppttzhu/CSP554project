@@ -4,7 +4,7 @@ import pysolr
 from config import *
 
 sub_dir_names = [
-    # sub_dir, category, name_pattern
+    sub_dir, category, name_pattern
     ('ci', '宋词', 'ci.song'),
     ('ci', '宋代词人', 'author.song'),
     ('json', '宋诗', 'poet.song'),
@@ -21,6 +21,8 @@ sub_dir_names = [
     ('wudai', '南唐诗人', 'authors'),
     ('youmengying', '幽梦影', 'youmengying')
 ]
+
+engine = ''  # a global variable for iteration
 
 
 def main():
@@ -97,7 +99,7 @@ def index_file(file_path, database, category):
     if type(json_files) is dict:
         json_files = [json_files]
     logging.getLogger(__name__).info("Making index for %s. (%d items)" % (category, len(json_files)))
-    for i in range(len(json_files)):
+    for i in range(10):#len(json_files)
         content = json_files[i]
         content['category'] = category
         if engine == 'elasticsearch':
@@ -105,12 +107,11 @@ def index_file(file_path, database, category):
         elif engine == 'solr':
             solr_dict[database].add([content])
     fp.close()
-    logging.getLogger(__name__).info("%d files added." % len(json_files))
+    logging.getLogger(__name__).info("%d items added." % len(json_files))
     if engine == 'elasticsearch':
         num = es.search(index=database, body={"query": {"match_all": {}}})['hits']['total']['value']
     elif engine == 'solr':
-        r = requests.get('http://localhost:%s/solr/%s/select?indent=on&q=*:*' % (port, database))
-        num = json.loads(r.text)['response']['numFound']
+        num = solr_dict[database].search(q="*:*").hits
     logging.getLogger(__name__).info("%d items in %s." % (num, database))
 
 
