@@ -22,29 +22,14 @@ sub_dir_names = [
     ('youmengying', '幽梦影', 'youmengying')
 ]
 
-engine = ''  # a global variable for iteration
-
 
 def main():
-    
-    global engine
     preprocess()
+    load_files('elasticsearch')
+    load_files('solr')
 
-    logging.getLogger(__name__).info('Runing Elasticsearch...')
-    engine = 'elasticsearch'
-    start = datetime.datetime.now()
-    load_files()
-    logging.getLogger(__name__).info('Elasticsearch takes %.1f s.' % (datetime.datetime.now() - start).total_seconds())
-     
-    logging.getLogger(__name__).info('Runing Solr...')
-    engine = 'solr'
-    start = datetime.datetime.now()
-    load_files()
-    logging.getLogger(__name__).info('Solr takes %.1f s.' % (datetime.datetime.now() - start).total_seconds())
 
-    
 def preprocess():
-    
     # Parameters 
     numShards = 1
     numReplica = 1
@@ -80,19 +65,21 @@ def preprocess():
         logging.getLogger(__name__).debug('Failed building Solr collections.')
 
 
-def load_files():
+def load_files(engine):
+    logging.getLogger(__name__).info('Runing %s...' % engine)
+    used_time = 0
     for sub_dir_name in sub_dir_names:
         sub_dir, category, name_pattern = sub_dir_name
         database = 'author' if name_pattern[:6] == 'author' else 'poetry'
-        for file in os.listdir(os.path.join(poetry_dir, sub_dir)):
-            filename = os.fsdecode(file)
-            if filename[:len(name_pattern)] == name_pattern and filename[-4:].lower() == 'json':
-                logging.getLogger(__name__).debug("Dealing with file: %s" % filename)
-                index_file(os.path.join(poetry_dir, sub_dir, filename), database, category)
+        for roots, directories, files in os.walk(os.path.join(poetry_dir, sub_dir)):
+            for file in files:
+                if file[:len(name_pattern)] == name_pattern and file[-4:].lower() == 'json':
+                    logging.getLogger(__name__).debug("Dealing with file: %s" % file)
+                    used_time += index_file(engine, os.path.join(roots, file), database, category)
+    logging.getLogger(__name__).info('%s takes %.1f s.' % (engine, used_time))
 
                 
-def index_file(file_path, database, category):
-    global engine
+def index_file(engine, file_path, database, category):
     fp = open(file_path, 'r')
     content = fp.read()
     json_files = json.loads(content)
@@ -110,20 +97,23 @@ def index_file(file_path, database, category):
     # index whole json object list with one command:
     for i in range(len(json_files)):
         json_files[i]['category'] = category
+        if engine == 'elasticsearch':
+            json_files[i] = { "_index" : database, "_source" : json_files[i] }
+    start = datetime.datetime.now()
     if engine == 'elasticsearch':
-        action = [{ "_index" : database, "_source" : json_file } for json_file in json_files]
-        helpers.bulk(es, action)
+        helpers.bulk(es, json_files)
     elif engine == 'solr':
         solr_dict[database].add(json_files)
+    used_time = (datetime.datetime.now() - start).total_seconds()
     fp.close()
-#     logging.getLogger(__name__).info("%d items added." % len(json_files))
-#     if engine == 'elasticsearch':
-#         # elasticsearch has time lag for the following queries
-#         num = es.search(index=database, body={"query": {"match_all": {}}})['hits']['total']['value']
-#         num = es.indices.stats(index=database)['_all']['primaries']['docs']['count']
-#     elif engine == 'solr':
-#         num = solr_dict[database].search(q="*:*").hits
-#     logging.getLogger(__name__).info("%d items in %s." % (num, database))
+    logging.getLogger(__name__).info("Finished within %.2f s." % used_time)
+    if engine == 'elasticsearch':
+        # elasticsearch has time lag for the following queries
+        num = es.indices.stats(index=database)['_all']['primaries']['docs']['count']
+    elif engine == 'solr':
+        num = solr_dict[database].search(q="*:*").hits
+    logging.getLogger(__name__).info("%d items in %s." % (num, database))
+    return used_time
 
 
 if __name__ == '__main__':
