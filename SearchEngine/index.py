@@ -1,4 +1,4 @@
-import json, os, datetime, logging, requests
+import json, os, datetime, requests
 from elasticsearch import Elasticsearch, helpers
 import pysolr
 from config import *
