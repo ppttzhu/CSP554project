@@ -1,10 +1,10 @@
 import json, os, datetime, logging, requests
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, helpers
 import pysolr
 from config import *
 
 sub_dir_names = [
-    sub_dir, category, name_pattern
+    # sub_dir, category, name_pattern
     ('ci', '宋词', 'ci.song'),
     ('ci', '宋代词人', 'author.song'),
     ('json', '宋诗', 'poet.song'),
@@ -29,7 +29,7 @@ def main():
     
     global engine
     preprocess()
-    
+
     logging.getLogger(__name__).info('Runing Elasticsearch...')
     engine = 'elasticsearch'
     start = datetime.datetime.now()
@@ -99,20 +99,31 @@ def index_file(file_path, database, category):
     if type(json_files) is dict:
         json_files = [json_files]
     logging.getLogger(__name__).info("Making index for %s. (%d items)" % (category, len(json_files)))
-    for i in range(10):#len(json_files)
-        content = json_files[i]
-        content['category'] = category
-        if engine == 'elasticsearch':
-            es.index(index=database, body=content)
-        elif engine == 'solr':
-            solr_dict[database].add([content])
-    fp.close()
-    logging.getLogger(__name__).info("%d items added." % len(json_files))
+#     # index each json object one by one: (Solr will be very slow) 
+#     for i in range(len(json_files)):
+#         content = json_files[i]
+#         content['category'] = category
+#         if engine == 'elasticsearch':
+#             es.index(index=database, body=content)
+#         elif engine == 'solr':
+#             solr_dict[database].add([content])
+    # index whole json object list with one command:
+    for i in range(len(json_files)):
+        json_files[i]['category'] = category
     if engine == 'elasticsearch':
-        num = es.search(index=database, body={"query": {"match_all": {}}})['hits']['total']['value']
+        action = [{ "_index" : database, "_source" : json_file } for json_file in json_files]
+        helpers.bulk(es, action)
     elif engine == 'solr':
-        num = solr_dict[database].search(q="*:*").hits
-    logging.getLogger(__name__).info("%d items in %s." % (num, database))
+        solr_dict[database].add(json_files)
+    fp.close()
+#     logging.getLogger(__name__).info("%d items added." % len(json_files))
+#     if engine == 'elasticsearch':
+#         # elasticsearch has time lag for the following queries
+#         num = es.search(index=database, body={"query": {"match_all": {}}})['hits']['total']['value']
+#         num = es.indices.stats(index=database)['_all']['primaries']['docs']['count']
+#     elif engine == 'solr':
+#         num = solr_dict[database].search(q="*:*").hits
+#     logging.getLogger(__name__).info("%d items in %s." % (num, database))
 
 
 if __name__ == '__main__':
