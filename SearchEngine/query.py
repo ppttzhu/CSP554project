@@ -4,35 +4,86 @@ import datetime
 
 
 def main():
-    chinese_characters = load_chinese_characters("3500commonChinesecharacters.xls")
+#     save_poem_writers("data/ChinesePoemWritters.txt")
+    run("single_search")
+#     run("multi_search_and")
+    run("multi_search_or")
+
+
+def run(experiment):
+    chinese_characters = load_chinese_characters("data/3500commonChinesecharacters.xls")
+    writers = load_poem_writers("data/ChinesePoemWritters.txt")
+    results, used_time = {}, {}
     for engine in ['elasticsearch', 'solr']:
-        logging.getLogger(__name__).info('Runing %s...' % engine)
+        logging.getLogger(__name__).info('Runing %s %s...' % (engine, experiment))
+        results[engine] = []
         start = datetime.datetime.now()
-        for i in range(10):  # len(chinese_characters)
-            docs, hits = single_search(engine, 'poetry', ['paragraphs'], chinese_characters[i])
-            logging.getLogger(__name__).info(hits)
-#             print(docs)
-        used_time = (datetime.datetime.now() - start).total_seconds()
-        logging.getLogger(__name__).info('%s takes %.1f s.' % (engine, used_time))
+        if experiment == 'single_search':
+            for i in range(len(chinese_characters)):
+                docs, hits = search(engine, 'poetry', [('paragraphs' , chinese_characters[i])])
+                results[engine].append((chinese_characters[i], hits))
+        elif experiment == 'multi_search_and':
+            for i in range(len(writers)):
+                for j in range(len(chinese_characters)):
+                    fields_queries = [('author', writers[i]), ('paragraphs' , chinese_characters[j])]
+                    docs, hits = search(engine, 'poetry', fields_queries, 'AND')
+                    results[engine].append((writers[i] + ',' + chinese_characters[j], hits))
+        elif experiment == 'multi_search_or':
+            for i in range(len(chinese_characters)):
+                fields_queries = [('title', chinese_characters[i]), ('paragraphs' , chinese_characters[i]), ('author', chinese_characters[i])]
+                docs, hits = search(engine, 'poetry', fields_queries, 'OR')
+                results[engine].append((chinese_characters[i], hits))
+        used_time[engine] = (datetime.datetime.now() - start).total_seconds()
+        logging.getLogger(__name__).info('%s takes %.4f s.' % (engine, used_time[engine]))
+    # Save to hits results to file
+    out_file_name = "results/%s.txt" % experiment
+    fp = open(out_file_name, 'w+')
+    for engine in ['elasticsearch', 'solr']:
+        for item in results[engine]:
+            fp.write(engine + ',' + item[0] + ',' + str(item[1]) + '\n')
+    fp.close()
+    logging.getLogger(__name__).info('Results saved to %s.' % out_file_name)
 
 
-def single_search(engine, database, fields, query):
+def search(engine, database, fields_queries, operator=""):
     if engine == 'elasticsearch':
-        request_body = {
-          "query": {
-            "multi_match": {
-              "query": query,
-              "fields": fields,
-              "operator":  "and" 
+        if len(fields_queries) > 1: 
+            # multi_search
+            fields_queries_list = []
+            for filed, query in fields_queries:
+                if len(query) > 1:
+                    fields_queries_list.append({"match" : {filed : {"query" : query, "operator":"and" }}})
+                else:
+                    fields_queries_list.append({"term" : {filed: query}})
+            if operator == "AND": 
+                operator = "must"  
+            elif operator == "OR":
+                operator = "should"  
+            request_body = {
+                "query" : {
+                    "bool" : { 
+                        operator : fields_queries_list
+                    }
+                }
             }
-          }
-        }
+        else: 
+            # single_search
+            field, query = fields_queries[0]
+            request_body = {
+                "query": {
+                    "match": {
+                        field: {
+                            "query": query,
+                        }
+                    }
+                }
+            }
         response = es.search(index=database, body=request_body)
         docs, hits = response['hits']['hits'], response['hits']['total']['value']
     elif engine == 'solr':
-        q = ""
-        for field in fields:
-            q += field + ":" + query
+        q = fields_queries[0][0] + ":" + fields_queries[0][1]
+        for i in range(1, len(fields_queries)):
+            q += " " + operator + " " + fields_queries[i][0] + ":" + fields_queries[i][1]
         response = solr_dict[database].search(q=q)
         docs, hits = response.docs, response.hits
     else:
@@ -45,6 +96,32 @@ def load_chinese_characters(file_name):
     sheetX = xls.parse(0)  # 0 is the sheet number
     chinese = sheetX['ch']  # ch is the column name
     return chinese
+
+
+def save_poem_writers(file_name):
+    request_body = {
+            "_source": ["name"],
+            "size": 10000,
+            "query": {
+                "match_all" : {}
+            }
+        }
+    response = es.search(index='author', body=request_body)
+    fp = open(file_name, 'w+')
+    for dict in response['hits']['hits']:
+        writer = dict['_source']['name']
+        if len(writer) > 1 and '□' not in writer and '{' not in writer and '（' not in writer and not any(char.isdigit() for char in writer):
+            fp.write(writer + '\n')
+    fp.close()
+    
+    
+def load_poem_writers(file_name):
+    fp = open(file_name, 'r')
+    writers = []
+    for line in fp:
+        writers.append(line[:-1])
+    fp.close()
+    return writers
 
  
 if __name__ == '__main__':

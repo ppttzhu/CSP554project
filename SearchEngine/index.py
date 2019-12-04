@@ -5,28 +5,28 @@ from config import *
 
 sub_dir_names = [
     # sub_dir, category, name_pattern
-    ('ci', '宋词', 'ci.song'),
+#     ('ci', '宋词', 'ci.song'),
     ('ci', '宋代词人', 'author.song'),
-    ('json', '宋诗', 'poet.song'),
-    ('json', '唐诗', 'poet.tang'),
+#     ('json', '宋诗', 'poet.song'),
+#     ('json', '唐诗', 'poet.tang'),
     ('json', '宋代诗人', 'authors.song'),
     ('json', '唐代诗人', 'authors.tang'),
-    ('lunyu', '论语', 'lunyu'),
-    ('shijing', '诗经', 'shijing'),
-    ('sishuwujing', '大学', 'daxue'),
-    ('sishuwujing', '孟子', 'mengzi'),
-    ('sishuwujing', '中庸', 'zhongyong'),
-    ('wudai', '花间集', 'huajianji'),
-    ('wudai', '南唐诗', 'poetrys'),
+#     ('lunyu', '论语', 'lunyu'),
+#     ('shijing', '诗经', 'shijing'),
+#     ('sishuwujing', '大学', 'daxue'),
+#     ('sishuwujing', '孟子', 'mengzi'),
+#     ('sishuwujing', '中庸', 'zhongyong'),
+#     ('wudai', '花间集', 'huajianji'),
+#     ('wudai', '南唐诗', 'poetrys'),
     ('wudai', '南唐诗人', 'authors'),
-    ('youmengying', '幽梦影', 'youmengying')
+#     ('youmengying', '幽梦影', 'youmengying')
 ]
 
 
 def main():
-    preprocess()
+#     preprocess()
     load_files('elasticsearch')
-    load_files('solr')
+#     load_files('solr')
 
 
 def preprocess():
@@ -76,7 +76,7 @@ def load_files(engine):
                 if file[:len(name_pattern)] == name_pattern and file[-4:].lower() == 'json':
                     logging.getLogger(__name__).debug("Dealing with file: %s" % file)
                     used_time += index_file(engine, os.path.join(roots, file), database, category)
-    logging.getLogger(__name__).info('%s takes %.1f s.' % (engine, used_time))
+    logging.getLogger(__name__).info('%s takes %.4f s.' % (engine, used_time))
 
                 
 def index_file(engine, file_path, database, category):
