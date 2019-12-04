@@ -1,8 +1,8 @@
-import sys, logging
+import os, sys, logging
 from elasticsearch import Elasticsearch
 import pysolr
 
-poetry_dir = '/mnt/Files/HP/Graduate/IIT/2019Fall/CSP554/Project/chinese-poetry'
+poetry_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'chinese-poetry')
 
 # Elasticsearch
 es = Elasticsearch()

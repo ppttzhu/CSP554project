@@ -73,6 +73,9 @@ def preprocess():
 
 
 def load_files(engine):
+    if not os.path.isdir(poetry_dir):
+        logging.getLogger(__name__).error('%s does not exist, please pull data from github.' % poetry_dir)
+        return 
     logging.getLogger(__name__).info('Runing %s...' % engine)
     used_time = 0
     for sub_dir_name in sub_dir_names:
