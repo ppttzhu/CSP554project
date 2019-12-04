@@ -62,12 +62,12 @@ sudo apt install openjdk-8-jre-headless
 # Test java:
 # java -version
 
-# Download Solr:
-wget http://www-eu.apache.org/dist/lucene/solr/8.3.0/solr-8.3.0.tgz
+# Download Solr: If this page cannot be found, please replace 8.3.1 to latest version
+wget http://www-eu.apache.org/dist/lucene/solr/8.3.1/solr-8.3.1.tgz
 
 # Install Solr in home directory:
-tar xzf solr-8.3.0.tgz solr-8.3.0/bin/install_solr_service.sh --strip-components=2
-sudo bash ./install_solr_service.sh solr-8.3.0.tgz -i ~/
+tar xzf solr-8.3.1.tgz solr-8.3.1/bin/install_solr_service.sh --strip-components=2
+sudo bash ./install_solr_service.sh solr-8.3.1.tgz -i ~/
 
 # Start Solr
 # sudo systemctl start solr
@@ -90,6 +90,10 @@ sudo -u solr ~/solr/bin/solr start -cloud -p 7574
 
 # Install python3 package. Prerequisites python3 pip
 # python3 -m pip install pysolr
+
+# remove install packages
+rm solr-8.3.1.tgz
+rm install_solr_service.sh
 
 # ==========================================================
 # If you want to install python packages with setup.py, install setuptools

@@ -116,7 +116,7 @@ def index_file(engine, file_path, database, category):
         solr_dict[database].add(json_files)
     used_time = (datetime.datetime.now() - start).total_seconds()
     fp.close()
-    logging.getLogger(__name__).info("Finished within %.2f s." % used_time)
+    logging.getLogger(__name__).info("Finished within %.4f s." % used_time)
     if engine == 'elasticsearch':
         # elasticsearch has time lag for the following queries
         num = es.indices.stats(index=database)['_all']['primaries']['docs']['count']
