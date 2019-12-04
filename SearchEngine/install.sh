@@ -1,5 +1,3 @@
-sudo apt-get update
-
 # ==========================================================
 # Install ElasticSearch with Debian. Prerequisites Java 8/11
 # https://www.elastic.co/guide/en/elasticsearch/reference/current/deb.html
@@ -26,26 +24,26 @@ curl -X GET 'http://localhost:9200'
 # sudo systemctl stop elasticsearch.service
 
 # Install python3 package. Prerequisites python3 pip
-python3 -m pip install elasticsearch
+# python3 -m pip install elasticsearch
 
 # ==========================================================
 # Install Kibana with Debian
 # https://www.elastic.co/guide/en/kibana/current/deb.html
 
 # Download and install the public signing key:
-wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
+# wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
 
 # Install the apt-transport-https:
-sudo apt-get install apt-transport-https
+# sudo apt-get install apt-transport-https
 
 # Save the repository definition to /etc/apt/sources.list.d/elastic-7.x.list:
-echo "deb https://artifacts.elastic.co/packages/7.x/apt stable main" | sudo tee -a /etc/apt/sources.list.d/elastic-7.x.list
+# echo "deb https://artifacts.elastic.co/packages/7.x/apt stable main" | sudo tee -a /etc/apt/sources.list.d/elastic-7.x.list
 
 # Install the Kibana
-sudo apt-get update && sudo apt-get install kibana
+# sudo apt-get update && sudo apt-get install kibana
 
 # Start Kibana
-sudo systemctl start kibana.service
+# sudo systemctl start kibana.service
 
 # Test Kibana, open http://localhost:5601
 
@@ -57,7 +55,9 @@ sudo systemctl start kibana.service
 # https://tecadmin.net/install-apache-solr-on-debian/
 
 # Install java:
-# sudo apt install default-java
+sudo apt install default-jre            
+sudo apt install openjdk-11-jre-headless
+sudo apt install openjdk-8-jre-headless 
 
 # Test java:
 # java -version
@@ -65,15 +65,18 @@ sudo systemctl start kibana.service
 # Download Solr:
 wget http://www-eu.apache.org/dist/lucene/solr/8.3.0/solr-8.3.0.tgz
 
-# Install Solr to home:
+# Install Solr in home directory:
 tar xzf solr-8.3.0.tgz solr-8.3.0/bin/install_solr_service.sh --strip-components=2
 sudo bash ./install_solr_service.sh solr-8.3.0.tgz -i ~/
 
 # Start Solr
 # sudo systemctl start solr
 
+# Change owner if no permission to create directory
+sudo chown -R solr:solr ~/solr
+
 # Start Solr in SolrCloud Mode
-~/solr/bin/solr start -cloud -p 7574
+sudo -u solr ~/solr/bin/solr start -cloud -p 7574
 # or to run with example
 # ~/solr/bin/solr start -e cloud 
 
@@ -86,5 +89,10 @@ sudo bash ./install_solr_service.sh solr-8.3.0.tgz -i ~/
 # rm -Rf ~/solr/example/cloud/
 
 # Install python3 package. Prerequisites python3 pip
-python3 -m pip install pysolr
+# python3 -m pip install pysolr
+
+# ==========================================================
+# If you want to install python packages with setup.py, install setuptools
+sudo apt-get install python3-setuptools
+sudo python3 setup.py develop
 

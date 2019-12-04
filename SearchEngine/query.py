@@ -31,19 +31,22 @@ def run(engine, experiment):
             docs, hits = search(engine, 'poetry', [('paragraphs' , chinese_characters[i])])
             results.append((chinese_characters[i], hits))
     elif experiment == 'multi_search_and':
-        for i in range(len(writers)):
-            for j in range(len(chinese_characters)):
-                fields_queries = [('author', writers[i]), ('paragraphs' , chinese_characters[j])]
+        for i in range(1000):  # len(chinese_characters)
+            for j in range(1000):  # len(writers)
+                fields_queries = [('paragraphs' , chinese_characters[i]), ('author', writers[j])]
                 docs, hits = search(engine, 'poetry', fields_queries, 'AND')
-                results.append((writers[i] + ',' + chinese_characters[j], hits))
+                results.append((writers[j] + ',' + chinese_characters[i], hits))
     elif experiment == 'multi_search_or':
-        for i in range(len(chinese_characters)):
-            fields_queries = [('title', chinese_characters[i]), ('paragraphs' , chinese_characters[i]), ('author', chinese_characters[i])]
-            docs, hits = search(engine, 'poetry', fields_queries, 'OR')
-            results.append((chinese_characters[i], hits))
+        for i in range(1000):  # len(chinese_characters)
+            for j in range(1000):  # len(writers)
+                fields_queries = [('title', chinese_characters[i]), ('paragraphs' , chinese_characters[i]), ('author', writers[j])]
+                docs, hits = search(engine, 'poetry', fields_queries, 'OR')
+                results.append((writers[j] + ',' + chinese_characters[i], hits))
     used_time = (datetime.datetime.now() - start).total_seconds()
     logging.getLogger(__name__).info('%s takes %.4f s.' % (engine, used_time))
     # Save to hits results to file
+    if not os.path.isdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results')):
+        os.mkdir('results')
     out_file_name = "results/%s.txt" % (engine + '_' + experiment)
     fp = open(out_file_name, 'w+')
     for item in results:
