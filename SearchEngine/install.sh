@@ -18,7 +18,7 @@ sudo apt-get update && sudo apt-get install elasticsearch
 sudo systemctl start elasticsearch.service
 
 # Test ElasticSearch, open http://localhost:9200
-curl -X GET 'http://localhost:9200'
+# curl -X GET 'http://localhost:9200'
 
 # Stop ElasticSearch
 # sudo systemctl stop elasticsearch.service

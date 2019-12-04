@@ -1,7 +1,7 @@
 from config import *
 import pandas as pd
 import datetime, sys
-
+from elasticsearch import helpers
 
 def main():
     if (len(sys.argv) < 2):
@@ -89,7 +89,9 @@ def search(engine, database, fields_queries, operator=""):
                 }
             }
         response = es.search(index=database, body=request_body)
-        docs, hits = response['hits']['hits'], response['hits']['total']['value']
+        response = helpers.scan(es, query=request_body, index=database)
+        docs = list(response)
+        hits = len(docs)
     elif engine == 'solr':
         q = fields_queries[0][0] + ":" + fields_queries[0][1]
         for i in range(1, len(fields_queries)):

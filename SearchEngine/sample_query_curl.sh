@@ -53,9 +53,10 @@ curl -X POST "localhost:9200/author/_search?pretty" -H 'Content-Type: applicatio
 
 curl -X POST "localhost:9200/poetry/_search?pretty" -H 'Content-Type: application/json' -d'
 {
+  "size": 10000000,
   "query" : {
     "bool" : { 
-      "must" : [
+      "should" : [
             {"match" : {
                 "author" : {
                     "query" : "苏轼",
@@ -69,6 +70,16 @@ curl -X POST "localhost:9200/poetry/_search?pretty" -H 'Content-Type: applicatio
   }
 }
 '
+
+curl -X PUT "localhost:9200/poetry/_settings?pretty" -H 'Content-Type: application/json' -d'
+{
+    "index" : {
+        "max_result_window" : "10000000"
+    }
+}
+'
+
+curl -X GET "localhost:9200/poetry/_settings?pretty"
 
 # Solr ==============================================
 

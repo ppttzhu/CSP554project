@@ -12,6 +12,8 @@ Run solr: `python3 index.py solr`
 Prepare data: `python3 query.py preprocess` 
 Run elasticsearch: `python3 query.py elasticsearch` 
 Run solr: `python3 query.py solr` 
-5. (Optional) In the meantime, run following command in terminal to track memory use:
+5. In the meantime, run following command in terminal to track memory use:
 `top -b -n300 | grep elastic >> memory_use.log`
 `top -b -n300 | grep solr >> memory_use.log`
+6. Run analysis.py to analyse logs and results.
+`python3 analysis.py` 
