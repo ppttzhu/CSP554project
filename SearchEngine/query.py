@@ -1,46 +1,53 @@
 from config import *
 import pandas as pd
-import datetime
+import datetime, sys
 
 
 def main():
-#     save_poem_writers("data/ChinesePoemWritters.txt")
-    run("single_search")
-#     run("multi_search_and")
-    run("multi_search_or")
+    if (len(sys.argv) < 2):
+        logging.getLogger(__name__).warning("Please run this script follow by argument: elasticsearch, solr or preprocess")
+    elif sys.argv[1] == "preprocess":
+        save_poem_writers("data/ChinesePoemWritters.txt")
+    elif sys.argv[1] == "elasticsearch":
+        run("elasticsearch", "single_search")
+        run("elasticsearch", "multi_search_and")
+        run("elasticsearch", "multi_search_or")
+    elif sys.argv[1] == "solr":
+        run("solr", "single_search")
+        run("solr", "multi_search_and")
+        run("solr", "multi_search_or")
+    else:
+        logging.getLogger(__name__).warning("Please run this script follow by argument: elasticsearch, solr or preprocess")
 
 
-def run(experiment):
+def run(engine, experiment):
     chinese_characters = load_chinese_characters("data/3500commonChinesecharacters.xls")
     writers = load_poem_writers("data/ChinesePoemWritters.txt")
-    results, used_time = {}, {}
-    for engine in ['elasticsearch', 'solr']:
-        logging.getLogger(__name__).info('Runing %s %s...' % (engine, experiment))
-        results[engine] = []
-        start = datetime.datetime.now()
-        if experiment == 'single_search':
-            for i in range(len(chinese_characters)):
-                docs, hits = search(engine, 'poetry', [('paragraphs' , chinese_characters[i])])
-                results[engine].append((chinese_characters[i], hits))
-        elif experiment == 'multi_search_and':
-            for i in range(len(writers)):
-                for j in range(len(chinese_characters)):
-                    fields_queries = [('author', writers[i]), ('paragraphs' , chinese_characters[j])]
-                    docs, hits = search(engine, 'poetry', fields_queries, 'AND')
-                    results[engine].append((writers[i] + ',' + chinese_characters[j], hits))
-        elif experiment == 'multi_search_or':
-            for i in range(len(chinese_characters)):
-                fields_queries = [('title', chinese_characters[i]), ('paragraphs' , chinese_characters[i]), ('author', chinese_characters[i])]
-                docs, hits = search(engine, 'poetry', fields_queries, 'OR')
-                results[engine].append((chinese_characters[i], hits))
-        used_time[engine] = (datetime.datetime.now() - start).total_seconds()
-        logging.getLogger(__name__).info('%s takes %.4f s.' % (engine, used_time[engine]))
+    results = []
+    logging.getLogger(__name__).info('Runing %s %s...' % (engine, experiment))
+    start = datetime.datetime.now()
+    if experiment == 'single_search':
+        for i in range(len(chinese_characters)):
+            docs, hits = search(engine, 'poetry', [('paragraphs' , chinese_characters[i])])
+            results.append((chinese_characters[i], hits))
+    elif experiment == 'multi_search_and':
+        for i in range(len(writers)):
+            for j in range(len(chinese_characters)):
+                fields_queries = [('author', writers[i]), ('paragraphs' , chinese_characters[j])]
+                docs, hits = search(engine, 'poetry', fields_queries, 'AND')
+                results.append((writers[i] + ',' + chinese_characters[j], hits))
+    elif experiment == 'multi_search_or':
+        for i in range(len(chinese_characters)):
+            fields_queries = [('title', chinese_characters[i]), ('paragraphs' , chinese_characters[i]), ('author', chinese_characters[i])]
+            docs, hits = search(engine, 'poetry', fields_queries, 'OR')
+            results.append((chinese_characters[i], hits))
+    used_time = (datetime.datetime.now() - start).total_seconds()
+    logging.getLogger(__name__).info('%s takes %.4f s.' % (engine, used_time))
     # Save to hits results to file
-    out_file_name = "results/%s.txt" % experiment
+    out_file_name = "results/%s.txt" % (engine + '_' + experiment)
     fp = open(out_file_name, 'w+')
-    for engine in ['elasticsearch', 'solr']:
-        for item in results[engine]:
-            fp.write(engine + ',' + item[0] + ',' + str(item[1]) + '\n')
+    for item in results:
+        fp.write(engine + ',' + item[0] + ',' + str(item[1]) + '\n')
     fp.close()
     logging.getLogger(__name__).info('Results saved to %s.' % out_file_name)
 
@@ -113,6 +120,7 @@ def save_poem_writers(file_name):
         if len(writer) > 1 and '□' not in writer and '{' not in writer and '（' not in writer and not any(char.isdigit() for char in writer):
             fp.write(writer + '\n')
     fp.close()
+    logging.getLogger(__name__).info('Results saved to %s.' % file_name)
     
     
 def load_poem_writers(file_name):

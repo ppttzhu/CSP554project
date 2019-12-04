@@ -1,32 +1,39 @@
-import json, os, datetime, requests
+import json, os, datetime, requests, sys
 from elasticsearch import Elasticsearch, helpers
 import pysolr
 from config import *
 
 sub_dir_names = [
     # sub_dir, category, name_pattern
-#     ('ci', '宋词', 'ci.song'),
+    ('ci', '宋词', 'ci.song'),
     ('ci', '宋代词人', 'author.song'),
-#     ('json', '宋诗', 'poet.song'),
-#     ('json', '唐诗', 'poet.tang'),
+    ('json', '宋诗', 'poet.song'),
+    ('json', '唐诗', 'poet.tang'),
     ('json', '宋代诗人', 'authors.song'),
     ('json', '唐代诗人', 'authors.tang'),
-#     ('lunyu', '论语', 'lunyu'),
-#     ('shijing', '诗经', 'shijing'),
-#     ('sishuwujing', '大学', 'daxue'),
-#     ('sishuwujing', '孟子', 'mengzi'),
-#     ('sishuwujing', '中庸', 'zhongyong'),
-#     ('wudai', '花间集', 'huajianji'),
-#     ('wudai', '南唐诗', 'poetrys'),
+    ('lunyu', '论语', 'lunyu'),
+    ('shijing', '诗经', 'shijing'),
+    ('sishuwujing', '大学', 'daxue'),
+    ('sishuwujing', '孟子', 'mengzi'),
+    ('sishuwujing', '中庸', 'zhongyong'),
+    ('wudai', '花间集', 'huajianji'),
+    ('wudai', '南唐诗', 'poetrys'),
     ('wudai', '南唐诗人', 'authors'),
-#     ('youmengying', '幽梦影', 'youmengying')
+    ('youmengying', '幽梦影', 'youmengying')
 ]
 
 
 def main():
-#     preprocess()
-    load_files('elasticsearch')
-#     load_files('solr')
+    if (len(sys.argv) < 2):
+        logging.getLogger(__name__).warning("Please run this script follow by argument: elasticsearch, solr or preprocess")
+    elif sys.argv[1] == "preprocess":
+        preprocess()
+    elif sys.argv[1] == "elasticsearch":
+        load_files('elasticsearch')
+    elif sys.argv[1] == "solr":
+        load_files('solr')
+    else:
+        logging.getLogger(__name__).warning("Please run this script follow by argument: elasticsearch, solr or preprocess")
 
 
 def preprocess():
