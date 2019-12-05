@@ -56,7 +56,7 @@ def run(engine, experiment):
     logging.getLogger(__name__).info('Results saved to %s.' % out_file_name)
 
 
-def search(engine, database, fields_queries, operator=""):
+def search(engine, database, fields_queries, operator="AND"):
     if engine == 'elasticsearch':
         if len(fields_queries) > 1: 
             # multi_search
