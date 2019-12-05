@@ -94,12 +94,14 @@ curl -X POST -H 'Content-Type: application/json' 'http://localhost:7574/solr/tes
 
 curl 'http://localhost:7574/solr/test/update?commit=true' --data-binary @/mnt/Files/HP/Graduate/IIT/2019Fall/CSP554/Project/chinese-poetry/json/poet.song.1000.json -H 'Content-type:application/json'
 
-curl -X GET "http://localhost:7574/solr/test/select?indent=on&q=*:*"
-curl -X GET "http://localhost:7574/solr/test/select?indent=on&q=*:*&fq=title:Doc"
+curl -X GET "http://localhost:7574/solr/poetry/select?indent=on&q=*:*"
+curl -X GET "http://localhost:7574/solr/poetry/select?indent=on&q=*:*&fq=title:Doc"
 # get all fields names
-curl -X GET "http://localhost:7574/solr/test/select?q=*:*&wt=csv&rows=0&facet"
+curl -X GET "http://localhost:7574/solr/poetry/select?q=author:李清照"
 
-curl 'http://localhost:7574/solr/poetry/select' -d '
+curl 'http://localhost:7574/solr/poetry/select?sow=true' -d '
 {
-  "query": "author:一"
+  "query": "author:李清照"
 }'
+
+

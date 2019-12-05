@@ -3,6 +3,7 @@ import pandas as pd
 import datetime, sys
 from elasticsearch import helpers
 
+
 def main():
     if (len(sys.argv) < 2):
         logging.getLogger(__name__).warning("Please run this script follow by argument: elasticsearch, solr or preprocess")
@@ -89,14 +90,25 @@ def search(engine, database, fields_queries, operator=""):
                 }
             }
         response = es.search(index=database, body=request_body)
-        response = helpers.scan(es, query=request_body, index=database)
-        docs = list(response)
-        hits = len(docs)
+        docs, hits = response['hits']['hits'], response['hits']['total']['value']
+#         # Find all documents without max hit limit but can be slow
+#         response = helpers.scan(es, query=request_body, index=database)
+#         docs = list(response)
+#         hits = len(docs)
     elif engine == 'solr':
-        q = fields_queries[0][0] + ":" + fields_queries[0][1]
-        for i in range(1, len(fields_queries)):
-            q += " " + operator + " " + fields_queries[i][0] + ":" + fields_queries[i][1]
-        response = solr_dict[database].search(q=q)
+        q = ""
+        for i in range(len(fields_queries)):
+            field, query = fields_queries[i]
+            if len(query) > 1:
+                combined_q = ""
+                for char in query:
+                    combined_q += " AND " + field + ":" + char
+                q += " " + operator + " " + "(" + combined_q[5:] + ")"
+            else:
+                q += " " + operator + " " + field + ":" + query
+        response = solr_dict[database].search(q=q[4:])
+#         # Find more documents, not only hits,  but can be slow
+#         response = solr_dict[database].search(q=q, rows=10000)
         docs, hits = response.docs, response.hits
     else:
         return None, None

@@ -61,9 +61,9 @@ def analyse_query_hit():
         for line in fp:
             linel = line[:-1].split(',')
             if 'single' in file_name:
-                hit += int(linel[2])
+                hit += min(10000, int(linel[2]))
             else:
-                hit += int(linel[3])
+                hit += min(10000, int(linel[3]))
         logging.getLogger(__name__).info("%s has hit: %d" % (file_name, hit))
         fp.close()
 
